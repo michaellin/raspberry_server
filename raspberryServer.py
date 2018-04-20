@@ -44,7 +44,6 @@ class ClientHandler(asyncore.dispatcher):
     def handle_read(self):
         data = self.recv(1024)
         self.logger.debug('handle_read() -> (%d) "%s"', len(data), data.rstrip())
-        # !!!!! EAXAMPLE - ECHO
         self.data_to_write.insert(0, data)
     
     def handle_close(self):
@@ -54,7 +53,7 @@ class ClientHandler(asyncore.dispatcher):
 def main():
     logging.basicConfig(level=logging.DEBUG, format='%(name)s:[%(levelname)s]: %(message)s')
     HOST = "192.168.1.72"
-    PORT = 10101
+    PORT = 1112
     s = Server((HOST,PORT))
     asyncore.loop()
 
