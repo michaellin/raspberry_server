@@ -6,8 +6,7 @@ import socket
 import logging
 
 class Server(asyncore.dispatcher):
-    def __init__(self, address, msger):
-        print(msger)
+    def __init__(self, address):
         asyncore.dispatcher.__init__(self)
         self.logger = logging.getLogger('Server')
         self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -53,9 +52,9 @@ class ClientHandler(asyncore.dispatcher):
 
 def main():
     logging.basicConfig(level=logging.DEBUG, format='%(name)s:[%(levelname)s]: %(message)s')
-    HOST = "localhost"
+    HOST = "192.168.1.72"
     PORT = 1112
-    s = Server((HOST,PORT), "hi")
+    s = Server((HOST,PORT))
     asyncore.loop()
 
 
