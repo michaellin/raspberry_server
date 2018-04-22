@@ -1,6 +1,8 @@
 ngrok
 bin/
 lib/
+include/
 *.pyc
 *.swp
 *.rdb
+.Python
