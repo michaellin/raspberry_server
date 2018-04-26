@@ -21,15 +21,19 @@ class Server(asyncore.dispatcher):
 		self.listen(5)
 		self.r = redis_handlr
 		self.p_recv = self.r.pubsub()
-		p_recv.subscribe('to_broadcast')
+		self.p_recv.subscribe('to_broadcast')
 		self.connections = []
 		#self.con_count = 0
 
 	def writable(self):
-		msg = p_recv.get_message()
+		msg = self.p_recv.get_message()
 		if (msg):
 			data = msg['data']
 			self.logger.debug(data)
+			for c in self.connections:
+				c.data_to_write.append(msg)
+			if (data == "status"):
+				r.publish('broadcast_rsp', 'all good')
 
 	def handle_accept(self):
 		# Called when a client connects to our socket
