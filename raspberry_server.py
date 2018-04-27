@@ -8,6 +8,10 @@ import redis
 import threading
 import time
 import Queue
+import re
+
+
+water_cmd_patt = re.compile('water (.*)')
 
 class Server(asyncore.dispatcher):
 	def __init__(self, address, redis_handlr):
@@ -23,17 +27,24 @@ class Server(asyncore.dispatcher):
 		self.p_recv = self.r.pubsub()
 		self.p_recv.subscribe('to_broadcast')
 		self.connections = []
-		#self.con_count = 0
 
 	def writable(self):
 		msg = self.p_recv.get_message()
 		if (msg):
 			data = msg['data']
 			self.logger.debug(data)
-			for c in self.connections:
-				c.data_to_write.append(msg)
-			if (data == "status"):
-				r.publish('broadcast_rsp', 'all good')
+			match = water_cmd_patt.search(data)
+			if (match):
+				# send to specific PIC
+				for c in self.connections:
+					if (c.name == match.group(1)):
+						c.data_to_write('Water!')
+			else:
+				# broadcast
+				for c in self.connections:
+					c.data_to_write.append(data)
+				if (data == "status"):
+					r.publish('broadcast_rsp', 'all good') # TODO
 
 	def handle_accept(self):
 		# Called when a client connects to our socket
@@ -45,12 +56,16 @@ class Server(asyncore.dispatcher):
 			self.connections.append(ch)
 	
 
+name_patt = re.compile('Hi there, this is PICy (.*)')
+
 class ClientHandler(asyncore.dispatcher):
 	#def __init__(self, sock, address, clients_dic, handler_id):
 	def __init__(self, sock, address):
 		asyncore.dispatcher.__init__(self, sock)
 		self.logger = logging.getLogger('Client ' + str(address))
 		self.data_to_write = []
+		self.data_to_write.append('Hello!')
+		self.name = "noname"
 	
 	def writable(self):
 		return bool(self.data_to_write)
@@ -66,7 +81,9 @@ class ClientHandler(asyncore.dispatcher):
 	def handle_read(self):
 		data = self.recv(1024)
 		self.logger.debug('handle_read() -> (%d) "%s"', len(data), data.rstrip())
-		self.data_to_write.insert(0, data)
+		match = name_patt.search(data)
+		if (match):
+			self.name = match.group(1)
 	
 	def handle_close(self):
 		self.logger.debug('handle_close()')
