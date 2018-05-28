@@ -35,16 +35,16 @@ class Server(asyncore.dispatcher):
 			self.logger.debug(data)
 			match = water_cmd_patt.search(data)
 			if (match):
-				# send to specific PIC
+				# if it is water command send to specific PIC
 				for c in self.connections:
 					if (c.name == match.group(1)):
-						c.data_to_write('Water!')
+						c.data_to_write.append('Water!')
 			else:
-				# broadcast
+				# else broadcast
 				for c in self.connections:
 					c.data_to_write.append(data)
-				if (data == "status"):
-					r.publish('broadcast_rsp', 'all good') # TODO
+				#if (data == "status"):
+			#		r.publish('broadcast_rsp', 'all good') # TODO
 
 	def handle_accept(self):
 		# Called when a client connects to our socket
@@ -52,7 +52,7 @@ class Server(asyncore.dispatcher):
 		if client_info is not None:
 			self.logger.debug('handle_accept() -> %s', client_info[1])
 			#ClientHandler(client_info[0], client_info[1], self.clients, str(self.con_count))
-			ch = ClientHandler(client_info[0], client_info[1])
+			ch = ClientHandler(client_info[0], client_info[1], self.connections)
 			self.connections.append(ch)
 	
 
@@ -60,12 +60,13 @@ name_patt = re.compile('Hi there, this is PICy (.*)')
 
 class ClientHandler(asyncore.dispatcher):
 	#def __init__(self, sock, address, clients_dic, handler_id):
-	def __init__(self, sock, address):
+	def __init__(self, sock, address, ch_dic):
 		asyncore.dispatcher.__init__(self, sock)
 		self.logger = logging.getLogger('Client ' + str(address))
 		self.data_to_write = []
 		self.data_to_write.append('Hello!')
 		self.name = "noname"
+		self.all_ch_dic = ch_dic
 	
 	def writable(self):
 		return bool(self.data_to_write)
@@ -83,7 +84,14 @@ class ClientHandler(asyncore.dispatcher):
 		self.logger.debug('handle_read() -> (%d) "%s"', len(data), data.rstrip())
 		match = name_patt.search(data)
 		if (match):
+			# Look for copies
+			for k in self.all_ch_dic:
+				if self.all_ch_dic[k].name == match.group(1):
+					del self.all_ch_dic[k]
 			self.name = match.group(1)
+		else:
+			r.publish('broadcast_rsp', data)
+			
 	
 	def handle_close(self):
 		self.logger.debug('handle_close()')
